@@ -8,13 +8,8 @@ from config import FEATURE_COLS
 
 def select_top_trades(model: RandomForestRegressor, df_raw: pd.DataFrame, num_trades: int = 3) -> pd.DataFrame:
     """
-    Given the full raw OHLCV history, computes features across the entire
-    history (so rolling windows are valid), then selects the top-N tickers
-    by predicted return at the most recent timestamp.
-
-    Previously this was computed only on the latest row, which meant every
-    rolling feature (SMA_20, Momentum, BollingerWidth) was NaN — the model
-    was receiving zeroed-out garbage at inference time.
+    Computes features on the full OHLCV history so rolling windows are valid,
+    then returns the top-N tickers by predicted return at the latest timestamp.
     """
     df = build_feature_matrix(df_raw)
 

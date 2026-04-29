@@ -154,8 +154,10 @@ def close_positions() -> list[dict]:
         completed.append(trade)
         logger.info("Closed %s: sold @ %.4f  PnL=$%.4f", ticker, sell_price, pnl)
 
-    # Restore uninvested cash + realised P&L
-    uninvested_cash = state.get_capital()  # was stored as uninvested during open
+    # State stores uninvested cash during the hold period (open_positions wrote
+    # capital - sum(allocations) there). Reconstruct total by adding sell proceeds.
+    # This avoids double-counting: we never stored the invested dollars in state.
+    uninvested_cash = state.get_capital()
     total_invested_back = sum(pos["Shares"] * c["SellPrice"]
                                for pos, c in zip(positions, completed)
                                if c["Ticker"] == pos["Ticker"])
