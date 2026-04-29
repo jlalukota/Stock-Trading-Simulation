@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-BUCKET_NAME = "gabe-jay-stock"
+BUCKET_NAME = "gabe-jay_stock"
 DATA_FILE = "data/yfinance_data.csv"
 TRADE_LOG_FILE = "data/trade_log.csv"
 
@@ -14,9 +14,9 @@ TICKERS = [
     "ADBE", "NOW", "T", "TXN", "QCOM", "VZ", "AMD", "SPGI", "UBER",
     "BKNG", "AXP", "CAT", "RTX", "MS", "AMGN", "INTU", "PGR", "BSX",
     "C", "PFE", "UNP", "NEE", "BLK", "AMAT", "CMCSA", "HON", "SCHW",
-    "GILD", "TJX", "LOW", "DHR", "BA", "FI", "SYK", "TMUS", "COP",
+    "GILD", "TJX", "LOW", "DHR", "BA", "SYK", "TMUS", "COP",
     "SBUX", "ADP", "PANW", "VRTX", "DE", "ADI", "ETN", "MDT", "BX",
-    "BMY", "MMC", "PLD", "LRCX", "MU", "INTC", "ANET", "KLAC", "CB",
+    "BMY", "PLD", "LRCX", "MU", "INTC", "ANET", "KLAC", "CB",
     "SO", "ICE",
 ]
 
