@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python *)",
+      "Bash(python3 *)",
+      "Bash(pip3 install *)",
+      "Bash(/mnt/c/Users/jlalu/AppData/Local/Programs/Python/Python312/python.exe --version)",
+      "Bash(/mnt/c/Users/jlalu/AppData/Local/Programs/Python/Python312/python.exe -c 'import pandas; print\\('\\\\''pandas'\\\\'', pandas.__version__\\)')",
+      "Bash(/mnt/c/Users/jlalu/AppData/Local/Programs/Python/Python312/python.exe -m pip list)"
+    ]
+  }
+}
