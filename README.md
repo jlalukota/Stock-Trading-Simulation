@@ -61,7 +61,7 @@ export GCLOUD_CREDENTIALS='<json key contents>'   # or set GOOGLE_APPLICATION_CR
 
 ## Usage
 
-### Live trading (event-driven)
+Live trading (event-driven)
 
 ```bash
 # Fresh start with $100k capital
@@ -112,7 +112,7 @@ cat state/positions.json
 
 ---
 
-### Backtesting
+Backtesting
 
 ```bash
 # Full year, daily bars
@@ -167,7 +167,7 @@ Ticker summary saved to backtest_output/ticker_summary.csv
 
 ---
 
-### Out-of-sample evaluation
+Out-of-sample evaluation
 
 ```bash
 # Default: 60% train / 20% val / 20% test + walk-forward
@@ -244,7 +244,7 @@ SUMMARY — why in-sample numbers are misleading
 
 ---
 
-### Capital allocation comparison
+Capital allocation comparison
 
 ```python
 from portfolio import compare_allocations
@@ -262,7 +262,7 @@ MSFT           0.002104    0.011038    0.1906  33333.3      40687.80    22707.93
 
 ---
 
-## Design decisions
+Design decisions
 
 **No data leakage**: rolling features (`SMA_20`, `BollingerWidth`, `Volatility`) are computed per-ticker in time order — `pandas.rolling()` is a causal operation. No global normalization is applied across the train/test boundary.
 
@@ -276,7 +276,7 @@ MSFT           0.002104    0.011038    0.1906  33333.3      40687.80    22707.93
 
 ---
 
-## Known limitations
+Known limitations
 
 - **yfinance 15m restriction**: intraday data is limited to the last 60 calendar days. Backtests beyond that must use `--interval 1d`.
 - **RandomForest for returns**: tree-based models don't extrapolate well out of their training distribution. A market regime shift (e.g. 2020 COVID crash) will degrade OOS performance sharply.
