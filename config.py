@@ -21,7 +21,8 @@ TICKERS = [
 ]
 
 FEATURE_COLS = ["Close", "Return", "SMA_20", "Momentum", "BollingerWidth"]
-TARGET_COL = "FutureReturn"
+RISK_COLS    = ["Volatility"]
+TARGET_COL   = "FutureReturn"
 
 HOLD_SECONDS = 15 * 60 - 17
 

@@ -6,7 +6,7 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     Adds engineered features to a long-format OHLCV DataFrame in-place.
     Requires columns: Datetime, Ticker, Close.
-    Adds: Return, FutureReturn, SMA_20, Momentum, BollingerWidth.
+    Adds: Return, FutureReturn, SMA_20, Momentum, BollingerWidth, Volatility.
     """
     g = df.groupby("Ticker")["Close"]
 
@@ -16,6 +16,8 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     df["Momentum"] = g.transform(lambda x: x.diff(5))
     # Bollinger band width = upper_band - lower_band = 4 × rolling_std
     df["BollingerWidth"] = g.transform(lambda x: x.rolling(30).std() * 4)
+    # Rolling return volatility — used by portfolio allocators for risk-adjusted sizing
+    df["Volatility"] = df.groupby("Ticker")["Return"].transform(lambda x: x.rolling(20).std())
 
     return df
 

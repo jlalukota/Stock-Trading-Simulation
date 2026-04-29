@@ -27,7 +27,6 @@ import math
 import os
 from dataclasses import dataclass, field
 from datetime import datetime as dt
-from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -36,6 +35,7 @@ import yfinance as yf
 from config import FEATURE_COLS, TARGET_COL, TICKERS
 from data.features import build_feature_matrix
 from models.trainer import train
+from portfolio import allocate_capital
 
 ANNUALIZATION = {
     "1d":  math.sqrt(252),
@@ -50,16 +50,19 @@ ANNUALIZATION = {
 
 @dataclass
 class BacktestConfig:
-    start: str            = "2024-01-01"
-    end: str              = "2025-01-01"
-    interval: str         = "1d"
-    top_n: int            = 3
-    capital: float        = 100_000.0
-    cost_bps: float       = 5.0       # commission per side, in basis points
-    slippage_bps: float   = 3.0       # market-impact per side, in basis points
-    min_train_periods: int = 60        # bars needed before first trade
-    retrain_every: int    = 20         # retrain model every N bars
-    cache_dir: str        = "cache"    # local CSV cache to avoid re-downloading
+    start: str              = "2024-01-01"
+    end: str                = "2025-01-01"
+    interval: str           = "1d"
+    top_n: int              = 3
+    capital: float          = 100_000.0
+    cost_bps: float         = 5.0        # commission per side, in basis points
+    slippage_bps: float     = 3.0        # market-impact per side, in basis points
+    min_train_periods: int  = 60         # bars needed before first trade
+    retrain_every: int      = 20         # retrain model every N bars
+    cache_dir: str          = "cache"    # local Parquet cache to avoid re-downloading
+    allocation_strategy: str = "combined" # equal | vol_adjusted | confidence | combined
+    max_position_frac: float = 0.40      # hard cap per position as fraction of capital
+    min_position_frac: float = 0.05      # positions below this fraction are excluded
 
 
 @dataclass
@@ -174,22 +177,12 @@ def compute_backtest_metrics(
 # Core backtest loop
 # ---------------------------------------------------------------------------
 
-def _equal_weight(top_df: pd.DataFrame, capital: float) -> dict[str, float]:
-    """Returns {ticker: dollar_allocation}. Phase 4 replaces this."""
-    n = len(top_df)
-    alloc = capital / n if n > 0 else 0.0
-    return {row["Ticker"]: alloc for _, row in top_df.iterrows()}
-
-
-def run_backtest(
-    config: BacktestConfig,
-    allocate: Callable = _equal_weight,
-) -> BacktestResult:
+def run_backtest(config: BacktestConfig) -> BacktestResult:
     """
     Main backtest loop.
 
-    `allocate` is a function (top_df, capital) -> {ticker: dollar_amount}.
-    Swap it out in Phase 4 without touching this function.
+    Capital allocation is controlled by config.allocation_strategy.
+    Strategies: 'equal', 'vol_adjusted', 'confidence', 'combined'.
     """
     df_raw = fetch_backtest_data(config)
 
@@ -198,7 +191,7 @@ def run_backtest(
 
     times = np.sort(df["Datetime"].unique())
     n_times = len(times)
-    print(f"Backtest period: {times[0]} → {times[-1]} | {n_times} bars | {df['Ticker'].nunique()} tickers")
+    print(f"Backtest period: {times[0]} -> {times[-1]} | {n_times} bars | {df['Ticker'].nunique()} tickers")
 
     slip  = config.slippage_bps / 10_000
     cost  = config.cost_bps    / 10_000
@@ -249,7 +242,12 @@ def run_backtest(
         top = df_bar.nlargest(config.top_n, "PredictedReturn")
 
         # --- Execution ---
-        allocations = allocate(top, capital)
+        allocations = allocate_capital(
+            top, capital,
+            strategy=config.allocation_strategy,
+            max_position_frac=config.max_position_frac,
+            min_position_frac=config.min_position_frac,
+        )
         period_pnl = 0.0
 
         for _, row in top.iterrows():
@@ -322,6 +320,7 @@ def print_summary(result: BacktestResult) -> None:
     print(sep)
     print(f"  Period:           {cfg.start} -> {cfg.end}  ({cfg.interval} bars)")
     print(f"  Tickers:          {len(TICKERS)}  |  Top-N per bar: {cfg.top_n}")
+    print(f"  Allocation:       {cfg.allocation_strategy}  (max {cfg.max_position_frac:.0%}/pos, min {cfg.min_position_frac:.0%}/pos)")
     print(f"  Cost:             {cfg.cost_bps} bps/side  |  Slippage: {cfg.slippage_bps} bps/side")
     print(f"\n  Starting capital: ${m['start_capital']:>14,.2f}")
     print(f"  Ending capital:   ${m['end_capital']:>14,.2f}")
@@ -382,9 +381,16 @@ def main() -> None:
     parser.add_argument("--slippage-bps",     type=float, default=3.0,
                         help="Slippage per side in basis points")
     parser.add_argument("--min-train-periods",type=int,   default=60)
-    parser.add_argument("--retrain-every",    type=int,   default=20)
-    parser.add_argument("--output-dir",       default="backtest_output")
-    parser.add_argument("--no-cache",         action="store_true",
+    parser.add_argument("--retrain-every",       type=int,   default=20)
+    parser.add_argument("--allocation-strategy", default="combined",
+                        choices=["equal", "vol_adjusted", "confidence", "combined"],
+                        help="Capital allocation strategy (default: combined)")
+    parser.add_argument("--max-position-frac",   type=float, default=0.40,
+                        help="Max fraction of capital per position")
+    parser.add_argument("--min-position-frac",   type=float, default=0.05,
+                        help="Min fraction of capital per position (smaller excluded)")
+    parser.add_argument("--output-dir",          default="backtest_output")
+    parser.add_argument("--no-cache",            action="store_true",
                         help="Ignore local cache and re-download data")
     args = parser.parse_args()
 
@@ -398,6 +404,9 @@ def main() -> None:
         slippage_bps=args.slippage_bps,
         min_train_periods=args.min_train_periods,
         retrain_every=args.retrain_every,
+        allocation_strategy=args.allocation_strategy,
+        max_position_frac=args.max_position_frac,
+        min_position_frac=args.min_position_frac,
     )
 
     if args.no_cache:
