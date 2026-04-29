@@ -26,7 +26,7 @@ def select_top_trades(model: RandomForestRegressor, df_raw: pd.DataFrame, num_tr
 
     latest["PredictedReturn"] = predict(model, latest)
 
-    top = latest.nlargest(num_trades, "PredictedReturn")[["Ticker", "Close", "PredictedReturn"]]
+    top = latest.nlargest(num_trades, "PredictedReturn")[["Ticker", "Close", "PredictedReturn", "Volatility"]]
     print("Selected trades:")
     print(top.to_string(index=False))
     return top
