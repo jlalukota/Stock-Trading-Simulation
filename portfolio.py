@@ -111,7 +111,7 @@ def _combined(top_df: pd.DataFrame) -> dict[str, float]:
     Only positive scores are allocated.
     """
     weights = {}
-    median_vol = top_df["Volatility"].median()
+    median_vol = top_df["Volatility_5"].median()
     for _, row in top_df.iterrows():
         pred = float(row.get("PredictedReturn", 0.0))
         vol  = float(row.get("Volatility", np.nan))
