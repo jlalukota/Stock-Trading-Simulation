@@ -20,9 +20,10 @@ TICKERS = [
     "SO", "ICE",
 ]
 
-FEATURE_COLS = [ "BollingerWidth", "price/SMA_5", "price/SMA_20", "price/SMA_60", 
-                 "SMA_20/SMA_60", "Momentum_10", "Momentum_20", "Momentum_60",
-                 "price/VWAP_20", "Volume_Z", "RollingSharpe_20"
+FEATURE_COLS = [ "Momentum_20",
+                 "Momentum_60",
+                 "price/VWAP_20",
+
                 ]
 RISK_COLS    = ["Volatility_5", "Volatility_60", "VolatilityRatio", "RVOL"]
 TARGET_COL   = "FutureReturn"

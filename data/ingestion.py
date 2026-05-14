@@ -58,7 +58,7 @@ def to_long_format(raw: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def fetch_and_upload_ohlcv(period: str = "5d", interval: str = "15m") -> None:
+def fetch_and_upload_ohlcv(period: str = "60d", interval: str = "15m") -> None:
     print("Downloading data from yfinance...")
 
     raw = yf.download(
