@@ -1,7 +1,6 @@
 # GabeJay Stock — Quantitative Trading Simulation
 
-A production-structured quantitative trading simulation. Pulls intraday data via yfinance, engineers features, trains a RandomForestRegressor, and executes 15-minute hold-period trades with realistic transaction costs and slippage. Includes a backtesting engine, out-of-sample evaluation pipeline, and an event-driven scheduler that replaces blocking sleep with APScheduler.
-
+A quantitative research and trading simulation pipeline for cross-sectional equity ranking. The system engineers momentum and VWAP-derived features across 100 S&P equities, trains a RandomForestRegressor to predict short-horizon returns, and evaluates rank-based portfolio performance under transaction costs, slippage, and walk-forward historical testing.
 ---
 
 ## Architecture
@@ -58,6 +57,15 @@ export GCLOUD_CREDENTIALS='<json key contents>'   # or set GOOGLE_APPLICATION_CR
 ```
 
 ---
+## Strongest Feature Configuration
+
+Empirical testing showed the strongest performance came from a compact feature set:
+
+- `Momentum_20`
+- `Momentum_60`
+- `price/VWAP_20`
+
+Additional volatility, volume, and SMA-derived features generally reduced out-of-sample ranking quality and increased turnover sensitivity.
 
 ## Usage
 
@@ -135,24 +143,21 @@ python3 backtest.py --start 2024-01-01 --end 2025-01-01 --cost-bps 10 --slippage
 BACKTEST SUMMARY
 ============================================================
   Period:           2024-01-01 -> 2025-01-01  (1d bars)
-  Tickers:          98  |  Top-N per bar: 3
+  Tickers:          98  |  Top-N per bar: 1
   Allocation:       combined  (max 40%/pos, min 5%/pos)
   Cost:             5.0 bps/side  |  Slippage: 3.0 bps/side
 
   Starting capital: $    100,000.00
-  Ending capital:   $    107,423.15
-  Total return:     +7.42%
-  Sharpe ratio:     +0.8341  (annualised)
-  Max drawdown:     12.34%
+  Ending capital:   $    132,310.18
+  Total return:     +32.31%
+  Sharpe ratio:     +1.3648  (annualised)
+  Max drawdown:     16.09%
 
-  Trades executed:  714
-  Win rate:         52.38%
-  Avg PnL/trade:    $10.39
-  Total costs paid: $6,821.44
+  Trades executed:  126
+  Win rate:         50.00%
+  Avg PnL/trade:    $256.43
+  Total costs paid: $13,258.73
 ============================================================
-Equity curve saved to backtest_output/equity_curve.csv
-Trade log saved to backtest_output/trade_log.csv
-Ticker summary saved to backtest_output/ticker_summary.csv
 ```
 
 **Output files:**
@@ -274,6 +279,8 @@ Design decisions
 
 **Allocation default (`combined`)**: weights by `predicted_return / volatility` — the predicted per-trade Sharpe ratio. This rewards high conviction *and* penalises high-risk tickers. Pure confidence weighting without the volatility denominator can over-concentrate in volatile names when the model happens to predict large moves.
 
+**Top-N portfolio construction**: empirical testing showed predictive edge was concentrated in the highest-ranked asset selection. Increasing portfolio breadth diluted returns and increased execution drag, suggesting the model behaves as a sparse high-conviction ranking system rather than a diversified portfolio optimizer.
+
 ---
 
 Known limitations
@@ -283,3 +290,34 @@ Known limitations
 - **No short selling**: all positions are long-only. The allocators treat negative predicted returns as zero weight.
 - **Single-bar hold**: positions are held for exactly one 15-minute bar. This matches the original system's design but ignores momentum effects that might favour longer holds.
 - **No portfolio-level risk limit**: each bar allocates the full capital. A drawdown stop (e.g. reduce position size after 5% loss) is not implemented.
+- **Regime dependence**: the strongest-performing feature set relied on momentum continuation and VWAP positioning, causing performance to vary substantially across market environments.
+- **Feature sensitivity**: adding additional volatility, SMA, and volume-derived indicators often reduced out-of-sample performance due to correlated or noisy signals.
+- **Execution sensitivity**: transaction costs materially reduced profitability; removing modeled slippage and commissions increased 2024 Top-1 returns from +32.3% to +61.8%.
+
+
+## Key Findings
+
+### Rank concentration
+
+Performance was highly concentrated in the model’s highest-ranked predictions.
+
+| Top-N | Return | Sharpe |
+|---|---:|---:|
+| 1 | +32.31% | 1.36 |
+| 2 | +8.49% | 0.56 |
+| 3 | -0.73% | 0.08 |
+| 5 | -9.71% | -0.57 |
+
+As lower-ranked predictions were included, returns and Sharpe degraded monotonically due to signal dilution, increased turnover, and transaction friction.
+
+### Regime sensitivity
+
+The strategy performed strongly during the momentum-heavy 2024 market regime, but underperformed during 2022 and 2023:
+
+| Year | Return |
+|---|---:|
+| 2022 | -18.73% |
+| 2023 | -9.74% |
+| 2024 | +32.31% |
+
+This suggests the model behaves primarily as a trend-following continuation system rather than a regime-agnostic predictor.
